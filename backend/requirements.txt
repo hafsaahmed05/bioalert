@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+httpx
+pydantic
+python-multipart
+fastapi
+uvicorn
+httpx
+pydantic
+python-multipart
+python-dotenv

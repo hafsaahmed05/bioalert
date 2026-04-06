@@ -15,13 +15,30 @@ Make sure you have:
 ```
 bioalert/
 ├── backend/
-│   ├── main.py
-│   ├── train_model.py
+│   ├── main.py              # FastAPI backend (API routes)
+│   ├── train_model.py       # Model training script
+│   ├── evaluate_model.py    # Generates graphs + evaluation metrics
+│   ├── predict.py           # Model inference logic (used by backend)
 │   ├── requirements.txt
 │
+│   ├── models/              # Saved model artifacts
+│   │   ├── risk_model.joblib
+│   │   ├── feature_names.joblib
+│   │   └── model_config.joblib
+│
+│   ├── outputs/             # Evaluation outputs (graphs)
+│   │   ├── feature_importance.png
+│   │   ├── correlation_matrix.png
+│   │   └── risk_distribution.png
+│
 ├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
 │   └── src/
-│       └── App.jsx
+│       └── App.jsx          # React UI
+│
+├── README.md
+└── SETUP.md
 ```
 
 

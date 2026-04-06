@@ -1,110 +1,177 @@
-# BioAlert — Setup Guide
+# ⚙️ Setup Guide — BioAlert
 
-## Project Structure
+Follow these steps to run the project locally.
+
+## 📦 Prerequisites
+
+Make sure you have:
+
+* **Python 3.8+**
+* **Node.js (v16+)** → https://nodejs.org/
+* **npm** (comes with Node)
+
+## 📁 Project Structure
+
 ```
 bioalert/
 ├── backend/
-│   ├── main.py          ← FastAPI backend (all ML + API logic)
-│   └── requirements.txt
-└── frontend/
-    └── src/
-        └── App.jsx      ← React webcam + dashboard UI
+│   ├── main.py
+│   ├── train_model.py
+│   ├── requirements.txt
+│
+├── frontend/
+│   └── src/
+│       └── App.jsx
 ```
 
-## Step 1 — Get your free API keys (15 mins)
 
-### iNaturalist (species ID)
-- No key needed! Their CV API is open.
+## 🔑 API Keys (Optional but Recommended)
 
-### IUCN Red List (extinction status)
-- Go to: https://apiv3.iucnredlist.org/
-- Click "Get a token" — free, instant
-- Add to backend: set env var IUCN_TOKEN=your_token
+### IUCN Red List
 
-### Anthropic (LLM narrative)
-- You already have this from your bot-detector project
-- Set env var: ANTHROPIC_API_KEY=your_key
-
-### GBIF (occurrence data)
-- No key needed! Open API.
-
-### Open-Meteo (habitat/climate data)
-- No key needed! Fully open.
-
----
-
-## Step 2 — Run the backend
+* https://apiv3.iucnredlist.org/
+* Get a free token
+* Set environment variable:
 
 ```bash
-cd bioalert/backend
+IUCN_TOKEN=your_token
+```
+
+
+### Anthropic (optional — for narrative insights)
+
+```bash
+ANTHROPIC_API_KEY=your_key
+```
+
+
+### Open APIs (no key required)
+
+* iNaturalist
+* GBIF
+* Open-Meteo
+
+
+## 🐍 Backend Setup
+
+### 1. Navigate to backend
+
+```bash
+cd backend
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
-IUCN_TOKEN=your_token ANTHROPIC_API_KEY=your_key uvicorn main:app --reload
 ```
 
-Backend runs at: http://localhost:8000
-Test it: http://localhost:8000/health
+### 3. Train the model
+
+```bash
+python train_model.py
+```
+
+This generates:
+
+* `risk_model.joblib`
+* `feature_names.joblib`
+* `model_config.joblib`
+
+
+### 4. Run backend server
+
+```bash
+uvicorn main:app --reload
+```
+
+Backend runs at:
+
+```
+http://localhost:8000
+```
+
+Health check:
+
+```
+http://localhost:8000/health
+```
 
 ---
 
-## Step 3 — Run the frontend
+## 💻 Frontend Setup
+
+### 1. Navigate to frontend
 
 ```bash
-# From bioalert/frontend
-npm create vite@latest . -- --template react
-# Replace src/App.jsx with our file
+cd ../frontend
+```
+
+---
+
+### 2. Install dependencies
+
+```bash
 npm install
+```
+
+---
+
+### 3. Run the app
+
+```bash
 npm run dev
 ```
 
-Frontend runs at: http://localhost:5173
+Frontend runs at:
+
+```
+http://localhost:5173
+```
 
 ---
 
-## Step 4 — Test with a real image
+## 🧪 Testing the App
 
 1. Open http://localhost:5173
-2. Click "Start Camera"
-3. Allow camera + location permissions
-4. Point at any plant, insect, or animal
-5. Click "Analyze Sighting"
-6. See the full threat dashboard appear
+2. Upload or input a wildlife observation
+3. Run analysis
+4. View biodiversity risk score + insights
 
 ---
 
-## Research Contributions (for your poster)
+## 🧠 Research Components
 
-### ML Contribution 1 — Invasion Front Detector
-- Algorithm: Statistical range anomaly detection (mean + 2σ on GBIF occurrences)
-- Research Q: Does location fall outside known species range?
-- Metric: % of sightings correctly flagged as new territory vs. known range
+### 1. Biodiversity Risk Model
 
-### ML Contribution 2 — Extinction Risk Tracker  
-- Data: IUCN Red List API + population trend
-- Research Q: What is the conservation status + trajectory of observed species?
-- Metric: Status distribution across your test sightings
+* Random Forest regression model
+* Combines ecological + environmental signals
+* Outputs continuous risk score
 
-### ML Contribution 3 — Habitat Threat Score
-- Algorithm: Climate stress heuristic (temp + precip features)
-- Upgrade path: Replace with NASA NDVI satellite features for poster
-- Research Q: Does habitat stress correlate with invasive species presence?
-- Metric: Correlation between threat score and known invasion zones
+### 2. Anomaly Detection
 
----
+* Uses range anomaly + sightings
+* Identifies out-of-distribution species observations
 
-## Poster Research Question
-"Can a multimodal citizen science tool combining computer vision species 
-identification, geospatial invasion front detection, and habitat threat 
-modeling provide actionable biodiversity threat intelligence in real time — 
-and does sighting location anomaly score correlate with habitat degradation?"
+
+### 3. Environmental Stress Modeling
+
+* Climate stress index (temperature + precipitation)
+* Habitat fragmentation signal
 
 ---
 
-## Demo Script (for judges)
-1. "Current apps like iNaturalist just tell you what something is"
-2. Point camera at plant/insect → get species ID
-3. "But BioAlert tells you what it MEANS"
-4. Show invasion alert → "This species has never been recorded here"
-5. Show IUCN status → "It's Endangered, population declining"
-6. Show habitat score → "And the ecosystem it's in is under HIGH stress"
-7. Show AI narrative → plain English summary
-8. "We're turning every citizen into a conservation sensor"
+## ⚠️ Notes
+
+* Model currently uses **simulated ecological data**
+* Designed for research + demonstration purposes
+* Can be extended with real-world datasets (IUCN, GBIF)
+
+---
+
+## 🚀 Future Improvements
+
+* Real-world dataset integration
+* SHAP explainability
+* Live API deployment
+* Improved ecological modeling

@@ -3,19 +3,18 @@ import { useState, useRef, useCallback, useEffect } from "react"
 const API = "http://localhost:8000"
 
 const IUCN_COLORS = {
-  EX: "#000000", EW: "#542344", CR: "#cc0000",
-  EN: "#cc6600", VU: "#cccc00", NT: "#a0c000",
-  LC: "#4fc000", DD: "#d3d3d3", NE: "#d3d3d3",
+  EX: "#1a1a1a", EW: "#542344", CR: "#e53e3e",
+  EN: "#dd6b20", VU: "#d69e2e", NT: "#68d391",
+  LC: "#38a169", DD: "#a0aec0", NE: "#a0aec0",
 }
-const TREND_EMOJI = { Decreasing: "📉", Increasing: "📈", Stable: "➡️", Unknown: "❓" }
+const TREND_EMOJI = { Decreasing: "↘", Increasing: "↗", Stable: "→", Unknown: "?" }
 const STATUS_LABELS = {
   EX: "Extinct", EW: "Extinct in Wild", CR: "Critically Endangered",
   EN: "Endangered", VU: "Vulnerable", NT: "Near Threatened",
   LC: "Least Concern", DD: "Data Deficient", NE: "Not Evaluated",
 }
-const RISK_COLORS = { CRITICAL: "#dc2626", HIGH: "#f59e0b", MEDIUM: "#3b82f6", LOW: "#4ade80" }
+const RISK_COLORS = { CRITICAL: "#e53e3e", HIGH: "#dd6b20", MEDIUM: "#3182ce", LOW: "#38a169" }
 
-// ── Action bank keyed by risk factor label ────────────────────────────────────
 const FACTOR_ACTIONS = {
   "Population decline rate": [
     { icon: "🧬", text: "Support captive breeding and species recovery programs" },
@@ -75,15 +74,10 @@ const FALLBACK_ACTIONS = [
 ]
 
 function getActions(species, iucn, risk, speciesInfo) {
-  const actions = []
-  const seen = new Set()
-  const addAction = (a) => {
-    if (!seen.has(a.text)) { seen.add(a.text); actions.push(a) }
-  }
-  const topFactors = risk?.top_factors || []
-  for (const factor of topFactors) {
-    const factorActions = FACTOR_ACTIONS[factor.label] || []
-    factorActions.slice(0, 2).forEach(addAction)
+  const actions = [], seen = new Set()
+  const addAction = (a) => { if (!seen.has(a.text)) { seen.add(a.text); actions.push(a) } }
+  for (const factor of risk?.top_factors || []) {
+    (FACTOR_ACTIONS[factor.label] || []).slice(0, 2).forEach(addAction)
     if (actions.length >= 5) break
   }
   if (speciesInfo?.is_invasive) FACTOR_ACTIONS["Invasive species status"].forEach(addAction)
@@ -92,7 +86,7 @@ function getActions(species, iucn, risk, speciesInfo) {
   return actions.slice(0, 5)
 }
 
-function getDonations(species, iucn) {
+function getDonations(species) {
   const all = [
     { name: "WWF — World Wildlife Fund", url: "https://www.worldwildlife.org/", icon: "🐼", tags: ["all"] },
     { name: "IUCN Save Our Species", url: "https://www.iucn.org/our-work/topic/save-our-species", icon: "🌿", tags: ["all"] },
@@ -101,16 +95,343 @@ function getDonations(species, iucn) {
     { name: "The Nature Conservancy", url: "https://www.nature.org/", icon: "🦋", tags: ["all"] },
     { name: "Defenders of Wildlife", url: "https://defenders.org/", icon: "🐺", tags: ["Mammalia", "Reptilia", "Amphibia"] },
     { name: "American Bird Conservancy", url: "https://abcbirds.org/", icon: "🦅", tags: ["Aves"] },
-    { name: "Xerces Society (Invertebrates)", url: "https://xerces.org/", icon: "🦋", tags: ["Insecta", "Arachnida"] },
+    { name: "Xerces Society", url: "https://xerces.org/", icon: "🦋", tags: ["Insecta", "Arachnida"] },
   ]
   const iconic = species?.iconic_taxon || ""
-  return all.filter(d => d.tags.includes("all") || d.tags.includes(iconic)).slice(0, 5)
+  return all.filter(d => d.tags.includes("all") || d.tags.includes(iconic)).slice(0, 4)
 }
 
+// ── 🌿 EDGE DECOR SYSTEM (clean + intentional) ───────────────────────────────
+
+const EdgeDecor = () => (
+  <>
+    {/* LEFT STRIP */}
+    <div style={{
+      position: "fixed",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 110,
+      pointerEvents: "none",
+      zIndex: 0,
+      transform: "scale(1.25)",
+      transformOrigin: "bottom left"
+    }}>
+
+      {/* hanging plant */}
+      <img src="/hangingplant1.png"
+        style={{
+          position: "absolute",
+          top: 110,
+          left: 20,
+          width: 130,
+          transform: "scale(1.99)",
+          animation: "sway 4s ease-in-out infinite",
+          transformOrigin: "top center"   
+        }}
+      />
+
+      <img src="/hangingplant2.png"
+        style={{
+          position: "absolute",
+          top: 120,
+          right: -800,
+          width: 130,
+          animation: "sway 4s ease-in-out infinite",
+          transformOrigin: "top center"   
+        }}
+      />
+
+      <img src="/hangingplant3.png"
+        style={{
+          position: "absolute",
+          top: 115,
+          right: -870,
+          width: 130,
+          transform: "scale(1.55)",
+          animation: "sway 4s ease-in-out infinite",
+          transformOrigin: "top center"   
+        }}
+      />
+
+      {/* bottom cluster */}
+      <div style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        width: 140,
+        height: 120
+      }}>
+
+        {/* plant */}
+        <img src="/plant2.png"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 10,
+            width: 95,
+            opacity: 0.9,
+            zIndex: 1
+          }}
+        />
+
+        {/* cactus */}
+        <img src="/cactus.png"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 60,
+            width: 85,
+            zIndex: 2
+          }}
+        />
+
+        {/* ladybug */}
+        <img src="/ladybug.png"
+          style={{
+            position: "absolute",
+            bottom: 65,
+            left: 95,
+            width: 40,
+            zIndex: 3,
+            animation: "bob 2.5s ease-in-out infinite"
+          }}
+        />
+      </div>
+
+    </div> {/* ✅ CLOSE LEFT STRIP */}
+
+
+    {/* RIGHT STRIP */}
+    <div style={{
+      position: "fixed",
+      right: 0,
+      top: 0,
+      bottom: 0,
+      width: 130,
+      pointerEvents: "none",
+      zIndex: 0,
+      transform: "scale(1.25)",
+      transformOrigin: "bottom right"
+    }}>
+
+      <img src="/hangingplant2.png"
+        style={{ position: "absolute", top: 0, right: 0, width: 110 }}
+      />
+
+      <img src="/bee.png"
+        style={{
+          position: "absolute",
+          top: 230,
+          right: 45,
+          width: 45,
+          animation: "float 3.5s ease-in-out infinite"
+        }}
+      />
+
+      <img src="/frog.png"
+        style={{
+          position: "absolute",
+          bottom: 60,
+          right: 50,
+          width: 85,
+          animation: "bob 3s ease-in-out infinite"
+        }}
+      />
+
+      <img src="/giraffe.png"
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 0,
+          width: 95
+        }}
+      />
+
+      <img src="/redpanda.png"
+      style={{
+        position: "absolute",
+        bottom: 0,
+        right: 40,
+        width: 140,                 // 🔥 MUCH bigger
+        transform: "scale(1.2)",
+        transformOrigin: "bottom right",
+        zIndex: 5,                  // 🔥 above everything
+        animation: "bob 3s ease-in-out infinite",
+        filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.5))"
+      }}
+    />
+
+    </div>
+
+
+    {/* BOTTOM MINI SCENE */}
+    <div style={{
+      position: "fixed",
+      bottom: 0,
+      left: "50%",
+      transform: "translateX(-50%) scale(1.2)",
+      width: 280,
+      height: 110,
+      pointerEvents: "none",
+      zIndex: 0
+    }}>
+      <img src="/cactus2.png"
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 105,
+          width: 65,
+          opacity: 0.6
+        }}
+      />
+    </div>
+  </>
+)
+
+const ResultDecor = () => (
+  <>
+    {/* 🌿 TOP HANGING PLANTS */}
+    <img src="/hangingplant1.png"
+      style={{
+        position: "fixed",
+        top: -5,
+        left: 10,
+        width: 120,
+        animation: "sway 6s ease-in-out infinite",
+        transformOrigin: "top center",
+        transform: "scale(4.0)",
+        opacity: 0.8,
+        pointerEvents: "none"
+      }}
+    />
+
+    <img src="/hangingplant3.png"
+        style={{
+          position: "fixed",
+          top: -5,
+          right: 120,
+          width: 130,
+          transform: "scale(1.55)",
+          animation: "sway 4s ease-in-out infinite",
+          transformOrigin: "top center"   
+        }}
+    />
+
+    <img src="/hangingplant2.png"
+      style={{
+        position: "fixed",
+        top: -5,
+        right: 55,
+        width: 110,
+        animation: "sway 7s ease-in-out infinite",
+        transformOrigin: "top center",
+        opacity: 0.8,
+        pointerEvents: "none"
+      }}
+    />
+
+    {/* 🌿 LEFT CLUSTER */}
+    <div style={{
+      position: "fixed",
+      left: 20,
+      bottom: 0,
+      width: 180,
+      height: 120,
+      pointerEvents: "none"
+    }}>
+      <img src="/plant2.png"
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          width: 90,
+          zIndex: 1
+        }}
+      />
+
+      <img src="/cactus.png"
+        style={{
+          position: "absolute",
+          bottom: 20,
+          left: 70,
+          width: 80,
+          zIndex: 2
+        }}
+      />
+
+      <img src="/plant3.png"
+        style={{
+          position: "absolute",
+          bottom: 20,
+          left: 140,
+          width: 80,
+          zIndex: 2
+        }}
+      />
+
+    </div>
+
+    {/* 🐼 PANDA */}
+    <img src="/redpanda.png"
+      style={{
+        position: "fixed",
+        right: 30,
+        bottom: 0,
+        width: 130,
+        animation: "bob 3s ease-in-out infinite",
+        zIndex: 5,
+        transform: "scale(1.1)"
+      }}
+    />
+
+    {/* 🐍 SNAKE */}
+    <img src="/snake.png"
+      style={{
+        position: "fixed",
+        right: 10,
+        bottom: 20,
+        width: 75,
+        opacity: 0.85,
+        zIndex: 2,
+        transform: "scale(0.8)",
+        transform: "rotate(10deg)",
+        animation: "bob 4s ease-in-out infinite",
+        pointerEvents: "none"
+      }}
+    />
+
+    <img src="/turtle.png"
+      style={{
+        position: "fixed",
+        right: 100,
+        bottom: 0,
+        width: 130,
+        animation: "bob 3s ease-in-out infinite",
+        zIndex: 5,
+        transform: "scale(1.1)"
+      }}
+    />
+
+    {/* 🐝 BEE */}
+    <img src="/bee.png"
+      style={{
+        position: "fixed",
+        top: 20,
+        right: 130,
+        width: 30,
+        opacity: 0.7,
+        animation: "float 3.5s ease-in-out infinite",
+        pointerEvents: "none"
+      }}
+    />
+  </>
+)
+
 export default function App() {
-  const videoRef     = useRef(null)
-  const canvasRef    = useRef(null)
-  const fileInputRef = useRef(null)
+  const videoRef      = useRef(null)
+  const canvasRef     = useRef(null)
+  const fileInputRef  = useRef(null)
   const [mode, setMode]               = useState(null)
   const [streaming, setStreaming]     = useState(false)
   const [loading, setLoading]         = useState(false)
@@ -124,8 +445,8 @@ export default function App() {
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setLocation({ lat: 39.0997, lng: -94.5786 })
+      pos => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => setLocation({ lat: 39.0997, lng: -94.5786 })
     )
   }, [])
 
@@ -136,19 +457,15 @@ export default function App() {
       videoRef.current.srcObject = stream
       videoRef.current.play()
       setStreaming(true)
-    } catch (e) { setError("Camera access denied.") }
+    } catch { setError("Camera access denied.") }
   }, [])
 
-  const handleUpload = useCallback((e) => {
+  const handleUpload = useCallback(e => {
     const file = e.target.files[0]
     if (!file) return
     setMode("upload"); setResult(null); setError(null)
     const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result
-      setPreview(dataUrl)
-      setUploadedB64(dataUrl.split(",")[1])
-    }
+    reader.onload = ev => { setPreview(ev.target.result); setUploadedB64(ev.target.result.split(",")[1]) }
     reader.readAsDataURL(file)
   }, [])
 
@@ -156,23 +473,21 @@ export default function App() {
     setLoading(true); setError(null); setResult(null); setShowModal(false)
     let imageB64 = uploadedB64
     if (mode === "camera" && videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current
-      canvas.width  = videoRef.current.videoWidth
-      canvas.height = videoRef.current.videoHeight
-      canvas.getContext("2d").drawImage(videoRef.current, 0, 0)
-      imageB64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1]
+      const c = canvasRef.current
+      c.width = videoRef.current.videoWidth; c.height = videoRef.current.videoHeight
+      c.getContext("2d").drawImage(videoRef.current, 0, 0)
+      imageB64 = c.toDataURL("image/jpeg", 0.8).split(",")[1]
     }
     if (!imageB64) { setError("No image to analyze."); setLoading(false); return }
     try {
       const resp = await fetch(`${API}/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lat: location?.lat ?? 39.0997, lng: location?.lng ?? -94.5786, image_b64: imageB64 }),
       })
       const data = await resp.json()
       if (data.error) setError(data.error)
       else setResult(data)
-    } catch (e) { setError("Could not connect to BioAlert server. Is the backend running?") }
+    } catch { setError("Could not connect to BioAlert server. Is the backend running?") }
     setLoading(false)
   }, [mode, uploadedB64, location])
 
@@ -180,54 +495,126 @@ export default function App() {
   const readyToAnalyze = (mode === "camera" && streaming) || (mode === "upload" && uploadedB64)
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", maxWidth: 520, margin: "0 auto", padding: 16, background: "#0f172a", minHeight: "100vh" }}>
-      <div style={{ textAlign: "center", marginBottom: 24, paddingTop: 12 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, color: "#4ade80", margin: 0, letterSpacing: -1 }}>🌿 BioAlert</h1>
-        <p style={{ color: "#94a3b8", fontSize: 14, margin: "6px 0 0" }}>Explore Wildlife & Conservation</p>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Chewy&family=Boogaloo&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0a1f12; font-family: 'Boogaloo', sans-serif; }
+        @keyframes bob   { 0%,100%{transform:translateY(0)}   50%{transform:translateY(-14px)} }
+        @keyframes sway  { 0%,100%{transform:rotate(-4deg)}   50%{transform:rotate(4deg)} }
+        @keyframes float { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-18px) rotate(5deg)} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin  { to{transform:rotate(360deg)} }
+        @keyframes popIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+        .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
+        .hover-lift:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(56,161,105,0.3); }
+        .upload-zone { transition: all 0.2s; cursor: pointer; }
+        .upload-zone:hover { border-color: #68d391 !important; background: rgba(104,211,145,0.08) !important; transform: scale(1.01); }
+        .tab-btn { transition: all 0.18s; }
+        .fade-in   { animation: fadeUp 0.4s ease both; }
+        .fade-in-2 { animation: fadeUp 0.4s ease 0.08s both; }
+        .fade-in-3 { animation: fadeUp 0.4s ease 0.16s both; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1a4731; border-radius: 99px; }
+      `}</style>
+
+      {/* Background */}
+      <div style={{ position: "fixed", inset: 0, background: "radial-gradient(ellipse at 30% 10%, #1a4731 0%, #0a1f12 55%, #060f0a 100%)", zIndex: -2 }} />
+      <div style={{ position: "fixed", inset: 0, backgroundImage: "radial-gradient(circle, rgba(104,211,145,0.035) 1px, transparent 1px)", backgroundSize: "28px 28px", zIndex: -1 }} />
+
+      {!result && <EdgeDecor />}
+      {result && <ResultDecor />}
+
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 140px 180px", position: "relative", zIndex: 1 }}>
+
+        {/* ── Header ── */}
+        <div style={{ textAlign: "center", marginBottom: result ? 24 : 44 }} className="fade-in">
+          <h1 style={{ fontFamily: "'Chewy', cursive", fontSize: 72, fontWeight: 800, color: "#68d391", letterSpacing: -1, lineHeight: 1, marginBottom: 8 }}>
+            BioAlert
+          </h1>
+          <p style={{ fontFamily: "'Chewy', cursive", color: "#9ae6b4", fontSize: 24, fontWeight: 600 }}>
+            Snap a photo · Discover the species · Protect our world
+          </p>
+        </div>
+
+        {/* ── Upload hero ── */}
+        <div style={{ width: "100%", maxWidth: 560, marginBottom: 32 }} className="fade-in-2">
+
+          {/* Mode buttons */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, background: "rgba(255,255,255,0.03)", borderRadius: 18, padding: 6, border: "1px solid #1a4731" }}>
+            {[["📷", "Use Camera", "camera", startCamera], ["🖼️", "Upload Photo", "upload", () => fileInputRef.current.click()]].map(([icon, label, m, action]) => (
+              <button key={m} onClick={action} className="tab-btn"
+                style={{ flex: 1, padding: "13px", fontSize: 16, fontWeight: 600, borderRadius: 14, cursor: "pointer", fontFamily: "'Boogaloo', sans-serif", border: "none",
+                  background: mode === m ? "linear-gradient(135deg, #38a169, #276749)" : "transparent",
+                  color: mode === m ? "#fff" : "#68d391",
+                  boxShadow: mode === m ? "0 4px 16px rgba(56,161,105,0.35)" : "none",
+                }}>
+                {icon} {label}
+              </button>
+            ))}
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} />
+          </div>
+
+          {mode === "camera" && (
+            <div style={{ borderRadius: 20, overflow: "hidden", border: "2px solid #2d6a4f", marginBottom: 14, background: "#000" }}>
+              <video ref={videoRef} style={{ width: "100%", display: "block", maxHeight: 360 }} playsInline muted />
+              <canvas ref={canvasRef} style={{ display: "none" }} />
+            </div>
+          )}
+
+          {mode === "upload" && preview && (
+            <div style={{ borderRadius: 20, overflow: "hidden", marginBottom: 14, border: "2px solid #68d391", boxShadow: "0 0 0 5px rgba(104,211,145,0.1)" }}>
+              <img src={preview} alt="preview" style={{ width: "100%", display: "block", maxHeight: 360, objectFit: "cover" }} />
+            </div>
+          )}
+
+          {!mode && (
+            <div className="upload-zone" onClick={() => fileInputRef.current.click()}
+              style={{ border: "2px dashed #2d6a4f", borderRadius: 20, padding: "52px 24px", textAlign: "center", background: "rgba(45,106,79,0.05)", marginBottom: 14 }}>
+              <img src="/turtle.png" alt="" style={{ width: 72, marginBottom: 14, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.3))", animation: "bob 3s ease-in-out infinite" }} />
+              <div style={{ fontFamily: "'Chewy', cursive", fontSize: 26, fontWeight: 700, color: "#68d391", marginBottom: 6 }}>Drop a photo or click to upload</div>
+              <div style={{ fontSize: 15, color: "#4a9c6d", fontWeight: 500 }}>Works with any animal, plant, or fungi — even rare species</div>
+            </div>
+          )}
+
+          {readyToAnalyze && (
+            <button className="hover-lift" onClick={analyze} disabled={loading}
+              style={{ width: "100%", padding: "17px", fontSize: 18, fontWeight: 700, fontFamily: "'Boogaloo', sans-serif",
+                background: loading ? "#1a4731" : "linear-gradient(135deg, #38a169 0%, #276749 100%)",
+                color: "#fff", border: "none", borderRadius: 16, cursor: loading ? "default" : "pointer",
+                boxShadow: loading ? "none" : "0 6px 24px rgba(56,161,105,0.4)",
+              }}>
+              {loading
+                ? <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    <span style={{ display: "inline-block", width: 18, height: 18, border: "2px solid rgba(255,255,255,0.25)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.75s linear infinite" }} />
+                    Identifying species...
+                  </span>
+                : "Identify & Learn"}
+            </button>
+          )}
+
+          {error && (
+            <div style={{ background: "rgba(229,62,62,0.08)", border: "1px solid rgba(229,62,62,0.4)", borderRadius: 12, padding: "12px 16px", marginTop: 12, color: "#fc8181", fontSize: 15, fontWeight: 500 }}>
+              {error}
+            </div>
+          )}
+        </div>
+
+        {result && <ResultDashboard result={result} userLocation={location} onOpenModal={openModal} />}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        <button onClick={startCamera} style={{ padding: "13px", fontSize: 15, fontWeight: 600, borderRadius: 10, cursor: "pointer", background: mode === "camera" ? "#166534" : "#1e293b", color: mode === "camera" ? "#fff" : "#4ade80", border: `2px solid ${mode === "camera" ? "#4ade80" : "#334155"}` }}>
-          📷 Use Camera
-        </button>
-        <button onClick={() => fileInputRef.current.click()} style={{ padding: "13px", fontSize: 15, fontWeight: 600, borderRadius: 10, cursor: "pointer", background: mode === "upload" ? "#166534" : "#1e293b", color: mode === "upload" ? "#fff" : "#4ade80", border: `2px solid ${mode === "upload" ? "#4ade80" : "#334155"}` }}>
-          🖼️ Upload Image
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleUpload} />
-      </div>
-
-      {mode === "camera" && (
-        <div style={{ background: "#000", borderRadius: 12, overflow: "hidden", marginBottom: 12 }}>
-          <video ref={videoRef} style={{ width: "100%", display: "block", minHeight: 260 }} playsInline muted />
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-        </div>
-      )}
-
-      {mode === "upload" && preview && (
-        <div style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden", border: "2px solid #4ade80" }}>
-          <img src={preview} alt="preview" style={{ width: "100%", display: "block", maxHeight: 300, objectFit: "cover" }} />
-        </div>
-      )}
-
-      {readyToAnalyze && (
-        <button onClick={analyze} disabled={loading} style={{ width: "100%", padding: "15px", fontSize: 16, fontWeight: 700, background: loading ? "#334155" : "#166534", color: "#fff", border: "none", borderRadius: 10, cursor: loading ? "default" : "pointer", marginBottom: 16 }}>
-          {loading ? "🔍 Identifying species..." : "🔍 Identify & Learn"}
-        </button>
-      )}
-
-      {error && <div style={{ background: "#450a0a", border: "1px solid #dc2626", borderRadius: 8, padding: 12, marginBottom: 12, color: "#fca5a5" }}>{error}</div>}
-      {result && <ResultDashboard result={result} userLocation={location} onOpenModal={openModal} />}
       {showModal && result && (
         <SpeciesModal result={result} activeTab={activeTab} setActiveTab={setActiveTab} onClose={() => setShowModal(false)} />
       )}
-    </div>
+    </>
   )
 }
 
 function ResultDashboard({ result, userLocation, onOpenModal }) {
   const { species, iucn, invasion, habitat, risk, species_info } = result
-  const iucnColor = IUCN_COLORS[iucn.status] ?? "#d3d3d3"
-  const riskColor = RISK_COLORS[risk?.level] ?? "#4ade80"
+  const iucnColor = IUCN_COLORS[iucn.status] ?? "#a0aec0"
+  const riskColor = RISK_COLORS[risk?.level] ?? "#38a169"
 
   useEffect(() => {
     if (!result.occurrences?.length) return
@@ -236,8 +623,8 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
       const map = window.L.map("bioalert-map").setView([result.occurrences[0].lat, result.occurrences[0].lng], 2)
       window._bioMap = map
       window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(map)
-      result.occurrences.forEach(o => window.L.circleMarker([o.lat, o.lng], { radius: 5, fillColor: "#dc2626", color: "#dc2626", fillOpacity: 0.6, weight: 1 }).addTo(map))
-      window.L.circleMarker([userLocation?.lat ?? 39.0997, userLocation?.lng ?? -94.5786], { radius: 10, fillColor: "#4ade80", color: "#166534", fillOpacity: 0.9, weight: 2 }).bindPopup("📍 Your location").openPopup().addTo(map)
+      result.occurrences.forEach(o => window.L.circleMarker([o.lat, o.lng], { radius: 5, fillColor: "#e53e3e", color: "#e53e3e", fillOpacity: 0.6, weight: 1 }).addTo(map))
+      window.L.circleMarker([userLocation?.lat ?? 39.0997, userLocation?.lng ?? -94.5786], { radius: 10, fillColor: "#68d391", color: "#276749", fillOpacity: 0.9, weight: 2 }).bindPopup("Your location").openPopup().addTo(map)
     }
     if (window.L) { load(); return }
     if (!document.getElementById("leaflet-css")) {
@@ -250,90 +637,90 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
     }
   }, [result])
 
+  const SLabel = ({ children }) => (
+    <div style={{ fontFamily: "'Chewy', cursive", fontSize: 16, fontWeight: 700, color: "#4a9c6d", marginBottom: 6, letterSpacing: 0.3 }}>{children}</div>
+  )
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ width: "100%", maxWidth: 1120, display: "flex", flexDirection: "column", gap: 16 }}>
 
-      <Card color="#052e16" border="#166534">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#4ade80" }}>{species.common_name}</div>
-            <div style={{ fontSize: 13, color: "#86efac", fontStyle: "italic", marginBottom: 10 }}>{species.name}</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => onOpenModal(0)} style={{ fontSize: 12, fontWeight: 700, background: "#166534", color: "#4ade80", border: "1px solid #4ade80", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}>
-                🦋 About
+      {/* Species hero */}
+      <div className="fade-in" style={{ background: "linear-gradient(135deg, rgba(45,106,79,0.35), rgba(15,40,25,0.7))", border: "1px solid #2d6a4f", borderRadius: 24, padding: "22px 26px", display: "flex", alignItems: "center", gap: 22 }}>
+        {species_info?.photo_url && (
+          <img src={species_info.photo_url} alt={species.common_name}
+            style={{ width: 100, height: 100, borderRadius: 16, objectFit: "cover", border: "3px solid #68d391", flexShrink: 0, boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }} />
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Chewy', cursive", fontSize: 36, fontWeight: 800, color: "#68d391", lineHeight: 1.1 }}>{species.common_name}</div>
+          <div style={{ fontSize: 15, color: "#9ae6b4", fontStyle: "italic", marginBottom: 14, fontWeight: 400 }}>{species.name}</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {[
+              { label: "About",       tab: 0, bg: "linear-gradient(135deg,#38a169,#276749)", color: "#fff",    border: "none" },
+              { label: "Risk Analysis", tab: 1, bg: "transparent", color: "#dd6b20", border: "1.5px solid #dd6b20" },
+              { label: "How to Help",   tab: 2, bg: "transparent", color: "#63b3ed", border: "1.5px solid #3182ce" },
+            ].map(({ label, tab, bg, color, border }) => (
+              <button key={tab} className="hover-lift tab-btn" onClick={() => onOpenModal(tab)}
+                style={{ fontFamily: "'Boogaloo', sans-serif", fontSize: 14, fontWeight: 600, background: bg, color, border, borderRadius: 99, padding: "8px 22px", cursor: "pointer",
+                  boxShadow: tab === 0 ? "0 4px 12px rgba(56,161,105,0.3)" : "none" }}>
+                {label}
               </button>
-              <button onClick={() => onOpenModal(1)} style={{ fontSize: 12, fontWeight: 700, background: "#1e293b", color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}>
-                ⚠️ Risk Analysis
-              </button>
-              <button onClick={() => onOpenModal(2)} style={{ fontSize: 12, fontWeight: 700, background: "#1e293b", color: "#60a5fa", border: "1px solid #60a5fa", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}>
-                🌍 How to Help
-              </button>
-            </div>
+            ))}
           </div>
-          {species_info?.photo_url && (
-            <img src={species_info.photo_url} alt={species.common_name} onClick={() => onOpenModal(0)}
-              style={{ width: 75, height: 75, borderRadius: 10, objectFit: "cover", border: "2px solid #4ade80", cursor: "pointer", flexShrink: 0 }} />
-          )}
         </div>
-      </Card>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        <Card color="#1e293b" border={`${riskColor}44`}>
-          <Label>Risk Score</Label>
-          <div style={{ fontSize: 24, fontWeight: 800, color: riskColor, marginTop: 4 }}>{risk?.score ?? "—"}</div>
-          <div style={{ fontSize: 11, color: riskColor, marginTop: 2 }}>{risk?.level}</div>
-        </Card>
-        <Card color="#1e293b" border="#334155">
-          <Label>IUCN Status</Label>
-          <div style={{ fontSize: 22, fontWeight: 800, color: iucnColor, marginTop: 4 }}>{iucn.status}</div>
-          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{STATUS_LABELS[iucn.status]}</div>
-        </Card>
-        <Card color="#1e293b" border="#334155">
-          <Label>Population</Label>
-          <div style={{ fontSize: 22, marginTop: 4 }}>{TREND_EMOJI[iucn.trend] ?? "❓"}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", marginTop: 2 }}>{iucn.trend}</div>
-        </Card>
+        {species.id_source && (
+          <div style={{ fontFamily: "'Chewy', cursive", fontSize: 14, fontWeight: 600, color: "#4a9c6d", background: "rgba(104,211,145,0.08)", border: "1px solid #1a4731", borderRadius: 99, padding: "5px 14px", flexShrink: 0, alignSelf: "flex-start" }}>
+            via {species.id_source}
+          </div>
+        )}
       </div>
 
-      <Card color={invasion.is_new_territory ? "#450a0a" : "#052e16"} border={invasion.is_new_territory ? "#dc2626" : "#166534"}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 26 }}>{invasion.is_new_territory ? "🚨" : "✅"}</span>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: invasion.is_new_territory ? "#fca5a5" : "#4ade80" }}>
-              {invasion.is_new_territory ? "Outside Known Range" : "Within Known Range"}
+      {/* Stats */}
+      <div className="fade-in-2" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        {[
+          { label: "Risk Score",  value: risk?.score ?? "—", sub: risk?.level, color: riskColor },
+          { label: "IUCN Status", value: iucn.status,        sub: STATUS_LABELS[iucn.status], color: iucnColor },
+          { label: "Population",  value: TREND_EMOJI[iucn.trend] ?? "?", sub: iucn.trend, color: "#9ae6b4" },
+          { label: "Sightings",   value: invasion.total_known_sightings,
+            sub: invasion.is_new_territory ? "Outside range" : "Within range",
+            color: invasion.is_new_territory ? "#e53e3e" : "#38a169" },
+        ].map(({ label, value, sub, color }) => (
+          <div key={label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(104,211,145,0.12)", borderRadius: 18, padding: "18px 20px" }}>
+            <div style={{ fontFamily: "'Chewy', cursive", fontSize: 16, fontWeight: 700, color: "#4a9c6d", marginBottom: 6 }}>{label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 13, color: "#4a9c6d", marginTop: 5, fontWeight: 500 }}>{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom row */}
+      <div className="fade-in-3" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(104,211,145,0.12)", borderRadius: 18, padding: "18px 20px" }}>
+            <SLabel>Habitat Threat</SLabel>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 10, overflow: "hidden" }}>
+                <div style={{ width: `${habitat.threat_score}%`, height: "100%", borderRadius: 99, transition: "width 1s ease",
+                  background: habitat.threat_score > 66 ? "#e53e3e" : habitat.threat_score > 33 ? "#dd6b20" : "#38a169" }} />
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 700, minWidth: 52, color: habitat.threat_level === "HIGH" ? "#e53e3e" : habitat.threat_level === "MEDIUM" ? "#dd6b20" : "#38a169" }}>
+                {habitat.threat_level}
+              </span>
             </div>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
-              Nearest sighting: <b style={{ color: "#e2e8f0" }}>{invasion.nearest_known_km} km</b>
-              {" · "}{invasion.total_known_sightings} recorded sightings
-            </div>
+            <div style={{ fontSize: 13, color: "#4a9c6d", marginTop: 8, fontWeight: 500 }}>{habitat.avg_temp_c}°C · {habitat.avg_precip_mm}mm precipitation</div>
+          </div>
+
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(104,211,145,0.12)", borderRadius: 18, padding: "18px 20px", flex: 1 }}>
+            <SLabel>AI Assessment</SLabel>
+            <p style={{ fontSize: 14, color: "#9ae6b4", lineHeight: 1.75, fontWeight: 400 }}>{result.narrative}</p>
           </div>
         </div>
-      </Card>
 
-      <Card color="#1e293b" border="#334155">
-        <Label>Habitat Threat Score</Label>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-          <ScoreBar score={habitat.threat_score} />
-          <div style={{ minWidth: 80 }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: habitat.threat_level === "HIGH" ? "#dc2626" : habitat.threat_level === "MEDIUM" ? "#f59e0b" : "#4ade80" }}>
-              {habitat.threat_level}
-            </div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>{habitat.avg_temp_c}°C · {habitat.avg_precip_mm}mm</div>
-          </div>
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(104,211,145,0.12)", borderRadius: 18, padding: "18px 20px", display: "flex", flexDirection: "column" }}>
+          <SLabel>Known Sightings — {result.occurrences.length} locations</SLabel>
+          <div style={{ fontSize: 12, color: "#2d6a4f", marginBottom: 10, fontWeight: 500 }}>Red = known sightings · Green = your location</div>
+          <div id="bioalert-map" style={{ flex: 1, minHeight: 260, borderRadius: 14, overflow: "hidden" }} />
         </div>
-      </Card>
-
-      <Card color="#1c1917" border="#92400e">
-        <Label>🤖 AI Conservation Assessment</Label>
-        <p style={{ margin: "8px 0 0", fontSize: 14, color: "#d6d3d1", lineHeight: 1.6 }}>{result.narrative}</p>
-      </Card>
-
-      <Card color="#1e293b" border="#334155">
-        <Label>🗺️ Known Sightings Map — {result.occurrences.length} locations</Label>
-        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8, marginTop: 2 }}>🔴 Known sightings · 🟢 Your location</div>
-        <div id="bioalert-map" style={{ height: 300, borderRadius: 8, overflow: "hidden" }} />
-      </Card>
-
+      </div>
     </div>
   )
 }
@@ -342,232 +729,173 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
   const { species, iucn, risk, species_info, species_facts = {}, fun_facts = [] } = result
   const photos    = species_info?.photos || (species_info?.photo_url ? [species_info.photo_url] : [])
   const actions   = getActions(species, iucn, risk, species_info)
-  const donations = getDonations(species, iucn)
-  const iucnColor = IUCN_COLORS[iucn.status] ?? "#d3d3d3"
-  const riskColor = RISK_COLORS[risk?.level] ?? "#4ade80"
+  const donations = getDonations(species)
+  const iucnColor = IUCN_COLORS[iucn.status] ?? "#a0aec0"
+  const riskColor = RISK_COLORS[risk?.level] ?? "#38a169"
 
-  const TABS = [
-    { label: "🦋 About", id: 0 },
-    { label: "⚠️ Risk",  id: 1 },
-    { label: "🌍 Help",  id: 2 },
-  ]
+  const SLabel = ({ children }) => (
+    <div style={{ fontFamily: "'Chewy', cursive", fontSize: 16, fontWeight: 700, color: "#4a9c6d", marginBottom: 8, letterSpacing: 0.3 }}>{children}</div>
+  )
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#0f172a", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", border: "1px solid #334155", borderBottom: "none" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>
+      <div onClick={e => e.stopPropagation()}
+        style={{ background: "linear-gradient(160deg, #111f16, #0a1f12)", borderRadius: 28, width: "100%", maxWidth: 820, maxHeight: "90vh", overflowY: "auto", border: "1px solid #2d6a4f", boxShadow: "0 32px 80px rgba(0,0,0,0.6)", animation: "popIn 0.3s cubic-bezier(0.34,1.4,0.64,1)" }}>
 
-        <div style={{ width: 40, height: 4, background: "#334155", borderRadius: 99, margin: "16px auto 0" }} />
-
-        <div style={{ padding: "16px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#4ade80" }}>{species.common_name}</div>
-            <div style={{ fontSize: 13, color: "#86efac", fontStyle: "italic" }}>{species.name}</div>
-          </div>
-          <button onClick={onClose} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", borderRadius: 99, width: 32, height: 32, cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
+        {/* Side critters in modal */}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, pointerEvents: "none" }}>
+          <img src="/snake.png"   alt="" style={{ position: "absolute", right: -20, top: 60,  width: 70, transform: "scaleX(-1)", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))", animation: "bob 3s ease-in-out infinite" }} />
+          <img src="/frog.png"    alt="" style={{ position: "absolute", left: -20,  top: 80,  width: 65, filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))", animation: "bob 3.5s ease-in-out infinite 0.5s" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 8, padding: "14px 20px 0" }}>
-          {TABS.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-              flex: 1, padding: "10px 0", fontSize: 13, fontWeight: 700, borderRadius: 10, cursor: "pointer",
-              background: activeTab === tab.id ? "#166534" : "#1e293b",
-              color: activeTab === tab.id ? "#fff" : "#64748b",
-              border: activeTab === tab.id ? "1px solid #4ade80" : "1px solid #334155",
-            }}>
+        {/* Header */}
+        <div style={{ padding: "26px 28px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontFamily: "'Chewy', cursive", fontSize: 34, fontWeight: 800, color: "#68d391" }}>{species.common_name}</div>
+            <div style={{ fontSize: 14, color: "#9ae6b4", fontStyle: "italic", fontWeight: 400 }}>{species.name}</div>
+          </div>
+          <button onClick={onClose}
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid #2d6a4f", color: "#68d391", borderRadius: 99, width: 38, height: 38, fontSize: 16, fontWeight: 700, cursor: "pointer", flexShrink: 0, fontFamily: "'Boogaloo', sans-serif" }}>
+            ✕
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 8, padding: "18px 28px 0" }}>
+          {[{ label: "About", id: 0 }, { label: "Risk", id: 1 }, { label: "How to Help", id: 2 }].map(tab => (
+            <button key={tab.id} className="tab-btn" onClick={() => setActiveTab(tab.id)}
+              style={{ flex: 1, padding: "11px 0", fontFamily: "'Boogaloo', sans-serif", fontSize: 15, fontWeight: 600, borderRadius: 14, cursor: "pointer",
+                background: activeTab === tab.id ? "linear-gradient(135deg,#38a169,#276749)" : "rgba(255,255,255,0.03)",
+                color: activeTab === tab.id ? "#fff" : "#4a9c6d",
+                border: activeTab === tab.id ? "none" : "1px solid #1a4731",
+                boxShadow: activeTab === tab.id ? "0 4px 14px rgba(56,161,105,0.3)" : "none",
+              }}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        <div style={{ padding: "20px" }}>
+        <div style={{ padding: "22px 28px 28px" }}>
 
           {/* ── Tab 0: About ── */}
           {activeTab === 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Hero photo */}
-              {photos[0] && (
-                <div style={{ borderRadius: 16, overflow: "hidden", height: 220 }}>
-                  <img src={photos[0]} alt={species.common_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-              )}
-
-              {/* IUCN / Trend / Risk badges */}
-              <div style={{ display: "flex", gap: 10 }}>
-                <div style={{ background: "#1e293b", border: `1px solid ${iucnColor}`, borderRadius: 10, padding: "8px 14px", flex: 1 }}>
-                  <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>IUCN</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: iucnColor }}>{iucn.status}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{STATUS_LABELS[iucn.status]}</div>
-                </div>
-                <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 10, padding: "8px 14px", flex: 1 }}>
-                  <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Trend</div>
-                  <div style={{ fontSize: 20 }}>{TREND_EMOJI[iucn.trend] ?? "❓"}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{iucn.trend}</div>
-                </div>
-                <div style={{ background: "#1e293b", border: `1px solid ${riskColor}44`, borderRadius: 10, padding: "8px 14px", flex: 1 }}>
-                  <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Risk</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: riskColor }}>{risk?.score}</div>
-                  <div style={{ fontSize: 11, color: riskColor }}>{risk?.level}</div>
-                </div>
-              </div>
-
-              {/* Species profile — Nat Geo style */}
-              {Object.keys(species_facts).length > 0 && (
-                <div style={{ background: "#1e293b", borderRadius: 14, overflow: "hidden", border: "1px solid #334155" }}>
-                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #334155" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1 }}>
-                      🐾 Species Profile
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {photos[0] && (
+                  <div style={{ borderRadius: 18, overflow: "hidden", height: 230 }}>
+                    <img src={photos[0]} alt={species.common_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[
+                    { label: "IUCN", value: iucn.status, sub: STATUS_LABELS[iucn.status], color: iucnColor },
+                    { label: "Trend", value: TREND_EMOJI[iucn.trend] ?? "?", sub: iucn.trend, color: "#9ae6b4" },
+                    { label: "Risk", value: risk?.score, sub: risk?.level, color: riskColor },
+                  ].map(({ label, value, sub, color }) => (
+                    <div key={label} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${color}40`, borderRadius: 14, padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontFamily: "'Chewy', cursive", fontSize: 14, color: "#4a9c6d", fontWeight: 700 }}>{label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color, marginTop: 3 }}>{value}</div>
+                      <div style={{ fontSize: 11, color: "#4a9c6d", marginTop: 2, fontWeight: 500 }}>{sub}</div>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {[
-                      ["Common Name",    species_facts.common_name],
-                      ["Scientific Name", species_facts.scientific_name],
-                      ["Type",           species_facts.type],
-                      ["Diet",           species_facts.diet],
-                      ["Group Name",     species_facts.group_name],
-                      ["Lifespan",       species_facts.lifespan],
-                      ["Size",           species_facts.size],
-                      ["Weight",         species_facts.weight],
-                      ["Habitat",        species_facts.habitat],
-                      ["Range",          species_facts.range],
-                    ]
-                      .filter(([, val]) => val)
-                      .map(([label, val], i, arr) => (
-                        <div key={label} style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          padding: "10px 16px",
-                          borderBottom: i < arr.length - 1 ? "1px solid #0f172a" : "none",
-                          background: i % 2 === 0 ? "#1e293b" : "#162032",
-                        }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>
-                            {label}
-                          </div>
-                          <div style={{
-                            fontSize: 14, color: "#e2e8f0",
-                            fontWeight: label === "Scientific Name" ? 400 : 500,
-                            fontStyle: label === "Scientific Name" ? "italic" : "normal",
-                          }}>
-                            {val}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
+                  ))}
                 </div>
-              )}
-
-              {/* Fun facts */}
-              {fun_facts.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
-                    ✨ Fun Facts
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {fun_facts.map((fact, i) => (
-                      <div key={i} style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid #334155" }}>
-                        <span style={{ fontSize: 18, flexShrink: 0 }}>
-                          {["🌊", "🧬", "🌍", "⚡", "🦴"][i % 5]}
-                        </span>
-                        <span style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>{fact}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Photo grid */}
-              {photos.length > 1 && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>📸 Photos</div>
+                {photos.length > 1 && (
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     {photos.slice(1, 5).map((url, i) => (
-                      <div key={i} style={{ borderRadius: 10, overflow: "hidden", height: 120 }}>
+                      <div key={i} style={{ borderRadius: 12, overflow: "hidden", height: 96 }}>
                         <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Learn More */}
-              {species_info?.wikipedia_url && (
-                <a href={species_info.wikipedia_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
-                  <span style={{ fontSize: 18 }}>📖</span>
-                  Learn More on Wikipedia →
-                </a>
-              )}
-
-            </div>
-          )}
-
-          {/* ── Tab 1: Risk Analysis ── */}
-          {activeTab === 1 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              <div style={{ background: "#1e293b", border: `1px solid ${riskColor}`, borderRadius: 16, padding: 20, textAlign: "center" }}>
-                <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Biodiversity Risk Score</div>
-                <div style={{ fontSize: 56, fontWeight: 900, color: riskColor, lineHeight: 1 }}>{risk?.score}</div>
-                <div style={{ fontSize: 14, color: riskColor, fontWeight: 700, marginTop: 4 }}>{risk?.level} RISK</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
-                  Model confidence: {risk?.confidence} · ±{risk?.uncertainty} pts uncertainty
-                  {risk?.confidence === "MEDIUM" && " · Limited sightings data in this region"}
-                  {risk?.confidence === "LOW" && " · Sparse data — treat score as estimate"}
-                </div>
-                <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
-                  IUCN-only baseline: {risk?.baseline_score}/100 → our model: {risk?.score}/100
-                </div>
+                )}
               </div>
 
-              {risk?.top_factors?.length > 0 && (
-                <div style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>📈 Risk Drivers Summary</div>
-                  <div style={{ marginBottom: 6 }}>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>Primary driver</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b" }}>{risk.top_factors[0]?.label}</div>
-                  </div>
-                  {risk.top_factors[1] && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>Secondary driver</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", opacity: 0.7 }}>{risk.top_factors[1]?.label}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {Object.keys(species_facts).length > 0 && (
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 18, overflow: "hidden", flex: 1 }}>
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #1a4731", background: "rgba(104,211,145,0.05)" }}>
+                      <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#68d391" }}>Species Profile</div>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {risk?.top_factors?.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>⚠️ Why this is risky</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {risk.top_factors.map((factor, i) => (
-                      <div key={i} style={{ background: "#1e293b", borderRadius: 10, padding: "10px 14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                          <span style={{ fontSize: 13, color: "#e2e8f0", fontWeight: 600 }}>{factor.label}</span>
-                          <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 700 }}>{factor.pct}%</span>
-                        </div>
-                        <div style={{ background: "#0f172a", borderRadius: 99, height: 6, overflow: "hidden" }}>
-                          <div style={{ width: `${factor.pct}%`, background: "#f59e0b", height: "100%", borderRadius: 99, transition: "width 0.8s" }} />
-                        </div>
+                    {[
+                      ["Common Name",     species_facts.common_name],
+                      ["Scientific Name", species_facts.scientific_name],
+                      ["Type",            species_facts.type],
+                      ["Diet",            species_facts.diet],
+                      ["Group Name",      species_facts.group_name],
+                      ["Lifespan",        species_facts.lifespan],
+                      ["Size",            species_facts.size],
+                      ["Weight",          species_facts.weight],
+                      ["Habitat",         species_facts.habitat],
+                      ["Range",           species_facts.range],
+                    ].filter(([, v]) => v).map(([label, val], i, arr) => (
+                      <div key={label} style={{ padding: "9px 16px", borderBottom: i < arr.length - 1 ? "1px solid #0a1f12" : "none", background: i % 2 === 0 ? "transparent" : "rgba(104,211,145,0.02)" }}>
+                        <div style={{ fontFamily: "'Chewy', cursive", fontSize: 13, fontWeight: 700, color: "#4a9c6d", marginBottom: 2 }}>{label}</div>
+                        <div style={{ fontSize: 13, color: "#c6f6d5", fontWeight: 500, fontStyle: label === "Scientific Name" ? "italic" : "normal" }}>{val}</div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              <div style={{ background: "#1e293b", borderRadius: 12, padding: 14, border: "1px solid #334155" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>🧠 Model Info</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {[
-                    ["Model", "RandomForest (300 trees)"],
-                    ["Training samples", "5,000"],
-                    ["Features", "10 ecological signals"],
-                    ["R² score", "0.90"],
-                    ["Improvement over baseline", "94.3%"],
-                  ].map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, color: "#64748b" }}>{k}</span>
-                      <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{v}</span>
+                {fun_facts.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#68d391", marginBottom: 10 }}>Fun Facts</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {fun_facts.map((fact, i) => (
+                        <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 12, padding: "11px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                          <img src={["/bee.png","/frog.png","/turtle.png","/ladybug.png","/snake.png"][i % 5]} alt="" style={{ width: 28, flexShrink: 0, filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }} />
+                          <span style={{ fontSize: 13, color: "#9ae6b4", lineHeight: 1.6, fontWeight: 400 }}>{fact}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {species_info?.wikipedia_url && (
+                  <a href={species_info.wikipedia_url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: "1px solid #1a4731", color: "#68d391", borderRadius: 14, padding: "13px", fontSize: 15, fontWeight: 600, textDecoration: "none", fontFamily: "'Boogaloo', sans-serif" }}>
+                    Learn More on Wikipedia →
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Tab 1: Risk ── */}
+          {activeTab === 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ background: `linear-gradient(135deg,${riskColor}14,${riskColor}06)`, border: `1px solid ${riskColor}40`, borderRadius: 20, padding: "24px", textAlign: "center" }}>
+                <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, color: "#4a9c6d", fontWeight: 700, marginBottom: 8 }}>Biodiversity Risk Score</div>
+                <div style={{ fontSize: 76, fontWeight: 700, color: riskColor, lineHeight: 1 }}>{risk?.score}</div>
+                <div style={{ fontSize: 18, color: riskColor, fontWeight: 600, marginTop: 6, fontFamily: "'Boogaloo', sans-serif" }}>{risk?.level} RISK</div>
+                <div style={{ fontSize: 13, color: "#4a9c6d", marginTop: 10, fontWeight: 500 }}>
+                  Confidence: {risk?.confidence} · ±{risk?.uncertainty} pts · IUCN baseline: {risk?.baseline_score}/100
+                </div>
+              </div>
+
+              {risk?.top_factors?.length > 0 && <>
+                <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#dd6b20" }}>Risk Drivers</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {risk.top_factors.map((factor, i) => (
+                    <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 14, padding: "14px 16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, color: "#c6f6d5", fontWeight: 600, flex: 1, paddingRight: 8 }}>{factor.label}</span>
+                        <span style={{ fontSize: 14, color: "#dd6b20", fontWeight: 700 }}>{factor.pct}%</span>
+                      </div>
+                      <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                        <div style={{ width: `${factor.pct}%`, background: "linear-gradient(90deg,#dd6b20,#e53e3e)", height: "100%", borderRadius: 99, transition: "width 0.8s" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>}
+
+              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 16, padding: 18 }}>
+                <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#4a9c6d", marginBottom: 14 }}>Model Info</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[["Model","RandomForest (300 trees)"],["Training samples","5,000"],["Features","10 ecological signals"],["R² score","0.90"],["Improvement vs baseline","94.3%"]].map(([k, v]) => (
+                    <div key={k}>
+                      <div style={{ fontFamily: "'Chewy', cursive", fontSize: 13, color: "#4a9c6d", fontWeight: 700 }}>{k}</div>
+                      <div style={{ fontSize: 13, color: "#c6f6d5", fontWeight: 600 }}>{v}</div>
                     </div>
                   ))}
                 </div>
@@ -575,55 +903,42 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
             </div>
           )}
 
-          {/* ── Tab 2: How to Help ── */}
+          {/* ── Tab 2: Help ── */}
           {activeTab === 2 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Actions You Can Take</div>
-                <div style={{ fontSize: 11, color: "#475569", marginBottom: 12 }}>Dynamically generated based on dominant risk factors</div>
+                <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#63b3ed", marginBottom: 12 }}>Actions You Can Take</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {actions.map((action, i) => (
-                    <div key={i} style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                      <span style={{ fontSize: 20, flexShrink: 0 }}>{action.icon}</span>
-                      <span style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}>{action.text}</span>
+                    <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{action.icon}</span>
+                      <span style={{ fontSize: 13, color: "#9ae6b4", lineHeight: 1.5, fontWeight: 400 }}>{action.text}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>💚 Support Conservation</div>
+                <div style={{ fontFamily: "'Chewy', cursive", fontSize: 18, fontWeight: 700, color: "#63b3ed", marginBottom: 12 }}>Support Conservation</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {donations.map((org, i) => (
                     <a key={i} href={org.url} target="_blank" rel="noopener noreferrer"
-                      style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "center", textDecoration: "none", border: "1px solid #334155" }}>
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid #1a4731", borderRadius: 12, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center", textDecoration: "none" }}>
                       <span style={{ fontSize: 20 }}>{org.icon}</span>
-                      <span style={{ fontSize: 13, color: "#60a5fa", fontWeight: 600 }}>{org.name}</span>
-                      <span style={{ marginLeft: "auto", color: "#334155" }}>→</span>
+                      <span style={{ fontSize: 13, color: "#63b3ed", fontWeight: 600 }}>{org.name}</span>
+                      <span style={{ marginLeft: "auto", color: "#2d6a4f" }}>→</span>
                     </a>
                   ))}
+                </div>
+                {/* Cute animal at bottom of help tab */}
+                <div style={{ marginTop: 20, textAlign: "center" }}>
+                  <img src="/redpanda.png" alt="" style={{ width: 90, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))", animation: "bob 3s ease-in-out infinite" }} />
                 </div>
               </div>
             </div>
           )}
 
         </div>
-        <div style={{ height: 20 }} />
       </div>
-    </div>
-  )
-}
-
-function Card({ children, color, border }) {
-  return <div style={{ background: color, border: `1px solid ${border}`, borderRadius: 12, padding: "14px 16px" }}>{children}</div>
-}
-function Label({ children }) {
-  return <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{children}</div>
-}
-function ScoreBar({ score }) {
-  const color = score > 66 ? "#dc2626" : score > 33 ? "#f59e0b" : "#4ade80"
-  return (
-    <div style={{ flex: 1, background: "#334155", borderRadius: 99, height: 10, overflow: "hidden" }}>
-      <div style={{ width: `${score}%`, background: color, height: "100%", borderRadius: 99, transition: "width 0.8s ease" }} />
     </div>
   )
 }

@@ -15,12 +15,6 @@ const STATUS_LABELS = {
 }
 const RISK_COLORS = { CRITICAL: "#dc2626", HIGH: "#f59e0b", MEDIUM: "#3b82f6", LOW: "#4ade80" }
 
-function extractFacts(summary) {
-  if (!summary) return []
-  const sentences = summary.match(/[^.!?]+[.!?]+/g) || []
-  return sentences.slice(0, 6).map(s => s.trim()).filter(s => s.length > 30)
-}
-
 // ── Action bank keyed by risk factor label ────────────────────────────────────
 const FACTOR_ACTIONS = {
   "Population decline rate": [
@@ -80,38 +74,24 @@ const FALLBACK_ACTIONS = [
   { icon: "🌍", text: "Support local and global conservation organizations" },
 ]
 
-// ── ML-driven action recommendations based on top risk factors ────────────────
 function getActions(species, iucn, risk, speciesInfo) {
   const actions = []
   const seen = new Set()
-
   const addAction = (a) => {
     if (!seen.has(a.text)) { seen.add(a.text); actions.push(a) }
   }
-
-  // Primary: pull from top risk factors identified by the model
   const topFactors = risk?.top_factors || []
   for (const factor of topFactors) {
     const factorActions = FACTOR_ACTIONS[factor.label] || []
     factorActions.slice(0, 2).forEach(addAction)
     if (actions.length >= 5) break
   }
-
-  // Secondary: fill gaps with status-based actions
-  if (speciesInfo?.is_invasive) {
-    FACTOR_ACTIONS["Invasive species status"].forEach(addAction)
-  }
-  if (["CR", "EN"].includes(iucn?.status)) {
-    FACTOR_ACTIONS["Conservation status"].forEach(addAction)
-  }
-
-  // Fallback if still empty
+  if (speciesInfo?.is_invasive) FACTOR_ACTIONS["Invasive species status"].forEach(addAction)
+  if (["CR", "EN"].includes(iucn?.status)) FACTOR_ACTIONS["Conservation status"].forEach(addAction)
   if (actions.length === 0) FALLBACK_ACTIONS.forEach(addAction)
-
   return actions.slice(0, 5)
 }
 
-// ── Donation links — filtered by species type ─────────────────────────────────
 function getDonations(species, iucn) {
   const all = [
     { name: "WWF — World Wildlife Fund", url: "https://www.worldwildlife.org/", icon: "🐼", tags: ["all"] },
@@ -128,19 +108,19 @@ function getDonations(species, iucn) {
 }
 
 export default function App() {
-  const videoRef    = useRef(null)
-  const canvasRef   = useRef(null)
+  const videoRef     = useRef(null)
+  const canvasRef    = useRef(null)
   const fileInputRef = useRef(null)
-  const [mode, setMode]             = useState(null)
-  const [streaming, setStreaming]   = useState(false)
-  const [loading, setLoading]       = useState(false)
-  const [result, setResult]         = useState(null)
-  const [error, setError]           = useState(null)
-  const [location, setLocation]     = useState(null)
-  const [preview, setPreview]       = useState(null)
+  const [mode, setMode]               = useState(null)
+  const [streaming, setStreaming]     = useState(false)
+  const [loading, setLoading]         = useState(false)
+  const [result, setResult]           = useState(null)
+  const [error, setError]             = useState(null)
+  const [location, setLocation]       = useState(null)
+  const [preview, setPreview]         = useState(null)
   const [uploadedB64, setUploadedB64] = useState(null)
-  const [showModal, setShowModal]   = useState(false)
-  const [activeTab, setActiveTab]   = useState(0)
+  const [showModal, setShowModal]     = useState(false)
+  const [activeTab, setActiveTab]     = useState(0)
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -273,7 +253,6 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-      {/* Species card */}
       <Card color="#052e16" border="#166534">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div style={{ flex: 1 }}>
@@ -298,7 +277,6 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
         </div>
       </Card>
 
-      {/* Risk score + IUCN row */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <Card color="#1e293b" border={`${riskColor}44`}>
           <Label>Risk Score</Label>
@@ -317,7 +295,6 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
         </Card>
       </div>
 
-      {/* Range alert */}
       <Card color={invasion.is_new_territory ? "#450a0a" : "#052e16"} border={invasion.is_new_territory ? "#dc2626" : "#166534"}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 26 }}>{invasion.is_new_territory ? "🚨" : "✅"}</span>
@@ -333,7 +310,6 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
         </div>
       </Card>
 
-      {/* Habitat */}
       <Card color="#1e293b" border="#334155">
         <Label>Habitat Threat Score</Label>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
@@ -347,13 +323,11 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
         </div>
       </Card>
 
-      {/* AI Narrative */}
       <Card color="#1c1917" border="#92400e">
         <Label>🤖 AI Conservation Assessment</Label>
         <p style={{ margin: "8px 0 0", fontSize: 14, color: "#d6d3d1", lineHeight: 1.6 }}>{result.narrative}</p>
       </Card>
 
-      {/* Map */}
       <Card color="#1e293b" border="#334155">
         <Label>🗺️ Known Sightings Map — {result.occurrences.length} locations</Label>
         <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8, marginTop: 2 }}>🔴 Known sightings · 🟢 Your location</div>
@@ -365,28 +339,25 @@ function ResultDashboard({ result, userLocation, onOpenModal }) {
 }
 
 function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
-  const { species, iucn, risk, species_info } = result
-  const facts    = extractFacts(species_info?.summary || "")
-  const photos   = species_info?.photos || (species_info?.photo_url ? [species_info.photo_url] : [])
-  const actions  = getActions(species, iucn, risk, species_info)
+  const { species, iucn, risk, species_info, species_facts = {}, fun_facts = [] } = result
+  const photos    = species_info?.photos || (species_info?.photo_url ? [species_info.photo_url] : [])
+  const actions   = getActions(species, iucn, risk, species_info)
   const donations = getDonations(species, iucn)
   const iucnColor = IUCN_COLORS[iucn.status] ?? "#d3d3d3"
   const riskColor = RISK_COLORS[risk?.level] ?? "#4ade80"
 
   const TABS = [
     { label: "🦋 About", id: 0 },
-    { label: "⚠️ Risk", id: 1 },
-    { label: "🌍 Help", id: 2 },
+    { label: "⚠️ Risk",  id: 1 },
+    { label: "🌍 Help",  id: 2 },
   ]
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#0f172a", borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", border: "1px solid #334155", borderBottom: "none" }}>
 
-        {/* Handle */}
         <div style={{ width: 40, height: 4, background: "#334155", borderRadius: 99, margin: "16px auto 0" }} />
 
-        {/* Header */}
         <div style={{ padding: "16px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#4ade80" }}>{species.common_name}</div>
@@ -395,7 +366,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
           <button onClick={onClose} style={{ background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", borderRadius: 99, width: 32, height: 32, cursor: "pointer", fontSize: 16, flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", gap: 8, padding: "14px 20px 0" }}>
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
@@ -409,18 +379,20 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
           ))}
         </div>
 
-        {/* Tab content */}
         <div style={{ padding: "20px" }}>
 
           {/* ── Tab 0: About ── */}
           {activeTab === 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Hero photo */}
               {photos[0] && (
                 <div style={{ borderRadius: 16, overflow: "hidden", height: 220 }}>
                   <img src={photos[0]} alt={species.common_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
               )}
 
+              {/* IUCN / Trend / Risk badges */}
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ background: "#1e293b", border: `1px solid ${iucnColor}`, borderRadius: 10, padding: "8px 14px", flex: 1 }}>
                   <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>IUCN</div>
@@ -439,20 +411,72 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                 </div>
               </div>
 
-              {facts.length > 0 && (
+              {/* Species profile — Nat Geo style */}
+              {Object.keys(species_facts).length > 0 && (
+                <div style={{ background: "#1e293b", borderRadius: 14, overflow: "hidden", border: "1px solid #334155" }}>
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #334155" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", textTransform: "uppercase", letterSpacing: 1 }}>
+                      🐾 Species Profile
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {[
+                      ["Common Name",    species_facts.common_name],
+                      ["Scientific Name", species_facts.scientific_name],
+                      ["Type",           species_facts.type],
+                      ["Diet",           species_facts.diet],
+                      ["Group Name",     species_facts.group_name],
+                      ["Lifespan",       species_facts.lifespan],
+                      ["Size",           species_facts.size],
+                      ["Weight",         species_facts.weight],
+                      ["Habitat",        species_facts.habitat],
+                      ["Range",          species_facts.range],
+                    ]
+                      .filter(([, val]) => val)
+                      .map(([label, val], i, arr) => (
+                        <div key={label} style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          padding: "10px 16px",
+                          borderBottom: i < arr.length - 1 ? "1px solid #0f172a" : "none",
+                          background: i % 2 === 0 ? "#1e293b" : "#162032",
+                        }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 2 }}>
+                            {label}
+                          </div>
+                          <div style={{
+                            fontSize: 14, color: "#e2e8f0",
+                            fontWeight: label === "Scientific Name" ? 400 : 500,
+                            fontStyle: label === "Scientific Name" ? "italic" : "normal",
+                          }}>
+                            {val}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Fun facts */}
+              {fun_facts.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>📋 Key Facts</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+                    ✨ Fun Facts
+                  </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {facts.map((fact, i) => (
-                      <div key={i} style={{ background: "#1e293b", borderRadius: 10, padding: "10px 14px", display: "flex", gap: 10 }}>
-                        <span style={{ color: "#4ade80", fontSize: 14 }}>•</span>
-                        <span style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}>{fact}</span>
+                    {fun_facts.map((fact, i) => (
+                      <div key={i} style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start", border: "1px solid #334155" }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>
+                          {["🌊", "🧬", "🌍", "⚡", "🦴"][i % 5]}
+                        </span>
+                        <span style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6 }}>{fact}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Photo grid */}
               {photos.length > 1 && (
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>📸 Photos</div>
@@ -466,12 +490,15 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                 </div>
               )}
 
+              {/* Learn More */}
               {species_info?.wikipedia_url && (
                 <a href={species_info.wikipedia_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: "block", textAlign: "center", background: "#1e293b", border: "1px solid #334155", color: "#4ade80", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
-                  🔗 Read full article on Wikipedia →
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#1e293b", border: "1px solid #334155", color: "#94a3b8", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+                  <span style={{ fontSize: 18 }}>📖</span>
+                  Learn More on Wikipedia →
                 </a>
               )}
+
             </div>
           )}
 
@@ -479,7 +506,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
           {activeTab === 1 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-              {/* Big risk score */}
               <div style={{ background: "#1e293b", border: `1px solid ${riskColor}`, borderRadius: 16, padding: 20, textAlign: "center" }}>
                 <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Biodiversity Risk Score</div>
                 <div style={{ fontSize: 56, fontWeight: 900, color: riskColor, lineHeight: 1 }}>{risk?.score}</div>
@@ -494,7 +520,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                 </div>
               </div>
 
-              {/* Risk drivers summary */}
               {risk?.top_factors?.length > 0 && (
                 <div style={{ background: "#1e293b", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>📈 Risk Drivers Summary</div>
@@ -511,7 +536,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                 </div>
               )}
 
-              {/* Why this is risky */}
               {risk?.top_factors?.length > 0 && (
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>⚠️ Why this is risky</div>
@@ -531,7 +555,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                 </div>
               )}
 
-              {/* Model info */}
               <div style={{ background: "#1e293b", borderRadius: 12, padding: 14, border: "1px solid #334155" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>🧠 Model Info</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -555,7 +578,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
           {/* ── Tab 2: How to Help ── */}
           {activeTab === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>🌍 Actions You Can Take</div>
                 <div style={{ fontSize: 11, color: "#475569", marginBottom: 12 }}>Dynamically generated based on dominant risk factors</div>
@@ -568,7 +590,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                   ))}
                 </div>
               </div>
-
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#60a5fa", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>💚 Support Conservation</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -582,7 +603,6 @@ function SpeciesModal({ result, activeTab, setActiveTab, onClose }) {
                   ))}
                 </div>
               </div>
-
             </div>
           )}
 

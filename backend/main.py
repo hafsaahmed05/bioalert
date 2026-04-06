@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=r"C:\Users\ahmed\source\repos\bioalert\backend\.env")
 
 import os
+import json
 import asyncio
 import math
 import base64
@@ -57,27 +58,83 @@ FEATURE_LABELS = {
     "range_fragmentation": "Habitat fragmentation",
 }
 
-# ── 1. Species ID ──────────────────────────────────────────────────────────────
+async def identify_with_claude(image_bytes: bytes) -> dict | None:
+    """Fallback: use Claude Vision for rare/low-confidence species"""
+    if not ANTHROPIC_KEY:
+        return None
+    try:
+        b64 = base64.b64encode(image_bytes).decode()
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                         "content-type": "application/json"},
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 300,
+                    "messages": [{
+                        "role": "user",
+                        "content": [
+                            {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}},
+                            {"type": "text", "text": """Identify the species in this image. Be specific — include critically endangered and rare species if applicable. Respond ONLY with JSON in this exact format, no other text:
+{"scientific_name": "...", "common_name": "...", "confidence": 0.0-1.0, "iconic_taxon": "Mammalia|Aves|Reptilia|Amphibia|Actinopterygii|Insecta|Plantae|Fungi"}"""}
+                        ]
+                    }]
+                }
+            )
+            data = resp.json()
+            import json, re
+            text = data["content"][0]["text"]
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                parsed = json.loads(match.group())
+                return {
+                    "taxon_id":    None,
+                    "name":        parsed.get("scientific_name", ""),
+                    "common_name": parsed.get("common_name", "Unknown"),
+                    "score":       parsed.get("confidence", 0.5),
+                    "iconic_taxon": parsed.get("iconic_taxon", ""),
+                    "id_source":   "claude_vision",
+                }
+    except Exception as e:
+        print(f"Claude Vision error: {e}")
+    return None
+
+
 async def identify_species(image_bytes: bytes) -> dict:
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            "https://api.inaturalist.org/v1/computervision/score_image",
-            files={"image": ("photo.jpg", image_bytes, "image/jpeg")},
-            headers={"Authorization": f"Bearer {INAT_TOKEN}"},
-        )
-        print("iNat response:", resp.status_code, resp.text[:300])
-        data = resp.json()
-    results = data.get("results", [])
-    if not results:
-        return {}
-    top = results[0]
-    return {
-        "taxon_id":    top["taxon"]["id"],
-        "name":        top["taxon"]["name"],
-        "common_name": top["taxon"].get("preferred_common_name", "Unknown"),
-        "score":       top.get("combined_score", top.get("vision_score", 0)) / 100,
-        "iconic_taxon": top["taxon"].get("iconic_taxon_name", ""),
-    }
+    # Tier 1: iNaturalist
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                "https://api.inaturalist.org/v1/computervision/score_image",
+                files={"image": ("photo.jpg", image_bytes, "image/jpeg")},
+                headers={"Authorization": f"Bearer {INAT_TOKEN}"},
+            )
+            data = resp.json()
+        results = data.get("results", [])
+        if results:
+            top = results[0]
+            combined_score = top.get("combined_score", top.get("vision_score", 0)) / 100
+            # Only trust iNat if confidence is reasonable
+            if combined_score >= 0.15:
+                return {
+                    "taxon_id":    top["taxon"]["id"],
+                    "name":        top["taxon"]["name"],
+                    "common_name": top["taxon"].get("preferred_common_name", "Unknown"),
+                    "score":       combined_score,
+                    "iconic_taxon": top["taxon"].get("iconic_taxon_name", ""),
+                    "id_source":   "inaturalist",
+                }
+    except Exception as e:
+        print(f"iNat error: {e}")
+
+    # Tier 2: Claude Vision fallback
+    print("iNat low confidence or failed — trying Claude Vision")
+    claude_result = await identify_with_claude(image_bytes)
+    if claude_result:
+        return claude_result
+
+    return {}
 
 # ── 2. Wikipedia + photo ───────────────────────────────────────────────────────
 async def get_species_info(taxon_id: int) -> dict:
@@ -296,36 +353,84 @@ def compute_risk_score(
         "baseline_score": baseline,
     }
 
-# ── 8. LLM narrative ──────────────────────────────────────────────────────────
+# ── 8. LLM narrative + structured facts ──────────────────────────────────────
 async def generate_narrative(species: dict, iucn: dict, invasion: dict,
-                              habitat: dict, risk: dict) -> str:
+                              habitat: dict, risk: dict) -> dict:
+    fallback = {
+        "narrative": f"Identified: {species.get('common_name')}. IUCN Status: {iucn.get('status')}. Risk: {risk.get('score')}/100.",
+        "facts": {},
+        "fun_facts": [],
+    }
+ 
     if not ANTHROPIC_KEY:
-        return f"Identified: {species.get('common_name')}. IUCN Status: {iucn.get('status')}. Risk: {risk.get('score')}/100."
+        return fallback
+ 
     try:
         top_factors = ", ".join(f["label"] for f in risk.get("top_factors", [])[:3])
-        prompt = f"""You are a conservation educator. Write 2-3 engaging sentences explaining this species and its conservation story in plain English. Focus on why this species matters to the ecosystem, what threatens it, and one thing the reader can do to help.
-
+ 
+        prompt = f"""You are a wildlife encyclopaedia. Given the species below, return ONLY a valid JSON object — no markdown, no explanation, no preamble.
+ 
 Species: {species.get('common_name')} ({species.get('name')})
-IUCN Status: {iucn.get('status')} | Population trend: {iucn.get('trend')}
-Biodiversity Risk Score: {risk.get('score')}/100 ({risk.get('level')})
+IUCN Status: {iucn.get('status')} | Trend: {iucn.get('trend')}
+Risk Score: {risk.get('score')}/100 ({risk.get('level')})
 Top risk factors: {top_factors}
-Habitat threat: {habitat.get('threat_level')}"""
-
+Habitat threat: {habitat.get('threat_level')}
+ 
+Return this exact JSON structure (omit any field you are not confident about):
+{{
+  "narrative": "<2-3 engaging sentences about this species: why it matters ecologically, what threatens it, and one action readers can take>",
+  "facts": {{
+    "common_name": "...",
+    "scientific_name": "...",
+    "type": "<e.g. Mammal, Bird, Fish, Reptile, Amphibian, Insect>",
+    "diet": "<e.g. Carnivore, Herbivore, Omnivore, Piscivore>",
+    "group_name": "<e.g. Pod, Colony, Pack, Flock — what a group is called>",
+    "lifespan": "<e.g. 10 to 15 years in the wild>",
+    "size": "<e.g. 4 to 5 feet long>",
+    "weight": "<e.g. 100 to 150 pounds>",
+    "habitat": "<e.g. Tropical rainforests, Coral reefs>",
+    "range": "<geographic range in plain English>"
+  }},
+  "fun_facts": [
+    "<short punchy fun fact 1>",
+    "<short punchy fun fact 2>",
+    "<short punchy fun fact 3>"
+  ]
+}}"""
+ 
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(
                 "https://api.anthropic.com/v1/messages",
-                headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
-                         "content-type": "application/json"},
-                json={"model": "claude-sonnet-4-20250514", "max_tokens": 200,
-                      "messages": [{"role": "user", "content": prompt}]},
+                headers={
+                    "x-api-key": ANTHROPIC_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": "claude-sonnet-4-20250514",
+                    "max_tokens": 600,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
             )
-            print("Anthropic response:", resp.status_code, resp.text[:200])
+            print("Anthropic response:", resp.status_code, resp.text[:300])
             data = resp.json()
-        return data["content"][0]["text"]
+ 
+        import re
+        text = data["content"][0]["text"]
+        # Strip any accidental markdown fences
+        text = re.sub(r"```json|```", "", text).strip()
+        parsed = json.loads(text)
+ 
+        return {
+            "narrative": parsed.get("narrative", fallback["narrative"]),
+            "facts":     parsed.get("facts", {}),
+            "fun_facts": parsed.get("fun_facts", []),
+        }
+ 
     except Exception as e:
         print(f"Narrative error: {e}")
-        return f"Identified: {species.get('common_name')}. Risk Score: {risk.get('score')}/100. Status: {iucn.get('status')}."
-
+        return fallback
+    
 # ── Main endpoint ─────────────────────────────────────────────────────────────
 class SightingRequest(BaseModel):
     lat: float
@@ -348,17 +453,19 @@ async def analyze_sighting(req: SightingRequest):
 
     invasion  = detect_invasion_front(occurrences, req.lat, req.lng)
     risk      = compute_risk_score(iucn, invasion, habitat, species_info, species, occurrences)
-    narrative = await generate_narrative(species, iucn, invasion, habitat, risk)
+    narrative_data = await generate_narrative(species, iucn, invasion, habitat, risk)
 
     return {
-        "species":      species,
-        "iucn":         iucn,
-        "invasion":     invasion,
-        "habitat":      habitat,
-        "species_info": species_info,
-        "risk":         risk,
-        "occurrences":  occurrences[:50],
-        "narrative":    narrative,
+        "species":       species,
+        "iucn":          iucn,
+        "invasion":      invasion,
+        "habitat":       habitat,
+        "species_info":  species_info,
+        "risk":          risk,
+        "occurrences":   occurrences[:50],
+        "narrative":     narrative_data["narrative"],
+        "species_facts": narrative_data["facts"],
+        "fun_facts":     narrative_data["fun_facts"],
     }
 
 @app.get("/health")

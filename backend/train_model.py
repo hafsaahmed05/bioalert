@@ -160,8 +160,8 @@ progress(4, TOTAL, "Evaluation + baseline computed", start)
 
 # ── Step 5: Save ───────────────────────────────────────────────────────────────
 time.sleep(0.1)
-joblib.dump(model,    "risk_model.joblib")
-joblib.dump(FEATURES, "feature_names.joblib")
+joblib.dump(model,    "models/risk_model.joblib")
+joblib.dump(FEATURES, "models/feature_names.joblib")
 joblib.dump({
     "features":               FEATURES,
     "uncertainty_thresholds": {"high": 8, "medium": 15},
@@ -171,7 +171,7 @@ joblib.dump({
     "r2":                     float(r2),
     "n_samples":              N,
     "n_features":             len(FEATURES),
-}, "model_config.joblib")
+}, "models/model_config.joblib")
 progress(5, TOTAL, "Models saved to disk", start)
 
 # ── Step 6: Report ─────────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ for case in test_cases:
 total_time = time.time() - start
 print(f"\n{'='*58}")
 print(f"  ✅ Training complete in {total_time:.1f}s")
-print(f"  📁 risk_model.joblib")
-print(f"  📁 feature_names.joblib")
-print(f"  📁 model_config.joblib")
+print(f"  📁 models/risk_model.joblib")
+print(f"  📁 models/feature_names.joblib")
+print(f"  📁 models/model_config.joblib")
 print(f"{'='*58}\n")
